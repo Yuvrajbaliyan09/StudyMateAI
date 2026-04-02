@@ -1,6 +1,7 @@
 from flask import Flask
 from test_gemini import ai_service
 from test_gemini import generate_quiz
+from test_gemini import chat_with_notes
 app = Flask(__name__)
 
 @app.route("/")
@@ -13,6 +14,12 @@ def box():
     <form method="POST" action="/quiz">
     <textarea name="notes" rows="10" cols="50"></textarea>
     <button type="submit"> Make Quiz</button>
+    </form>
+
+    <form method="POST" action="/chat">
+    <textarea name="notes" rows="10" cols="50"></textarea>
+    <textarea name="Question" placeholder ="Ask a Question" rows="7" cols="30"></textarea>
+    <button type="submit"> Answer</button>
     </form>'''
 
 @app.route("/summarize", methods=["POST"])
@@ -27,6 +34,14 @@ def quiz():
     from flask import request
     notes = request.form["notes"]
     result = generate_quiz(notes)
+    return result
+
+@app.route("/chat",methods=["POST"])
+def chat():
+    from flask import request
+    notes = request.form["notes"]
+    question = request.form["Question"]
+    result = chat_with_notes(notes,question)
     return result
 
 print(__name__)
