@@ -14,7 +14,7 @@ def ai_service(notes):
         messages=[
     {"role": "user", "content": f"Summarize this in short so i can easily understand: {notes}"}
     ])
-    response.choices[0].message.content
+    return response.choices[0].message.content
         
 
 def generate_quiz(notes):
@@ -24,7 +24,7 @@ def generate_quiz(notes):
     {"role": "user", "content": f'''Create 5 multiple choice questions from these notes.each question must have 4 options (A, B, C, D) and indicate the correct answer.
     Notes: {notes}'''}
     ])
-    response.choices[0].message.content
+    return response.choices[0].message.content
 
 def chat_with_notes(notes,Question):
     response = client.chat.completions.create(
