@@ -1,5 +1,5 @@
 from flask import Flask,request,render_template ,jsonify
-from database import init_db, save_session, get_sessions, get_session_by_id
+from database import init_db, save_session, get_sessions, get_session_by_id,delete_session
 from test_gemini import ai_service ,generate_quiz , chat_with_notes
 import json
 app = Flask(__name__)
@@ -49,17 +49,34 @@ def chat():
 
     return jsonify({"reply":result , "session_id": session_id})
 
+@app.route("/sessions")
+def sessions():
+    rows = get_sessions()
+    result = []
+    for row in rows:
+        result.append({
+            "id": row[0],
+            "preview": row[1][:60],
+            "created_at": row[2]
+        })
+    return jsonify(result)
+
 @app.route("/session/<int:session_id>")
 def view_session(session_id):
     session = get_session_by_id(session_id)
-    return f'''
-        <h2>Session {session[0]}</h2>
-        <h3>Notes:</h3>
-        <pre>{session[1]}</pre>
-        <h3>Summary:</h3>
-        <pre>{session[2]}</pre>
-        <a href="/">Go Back</a>
-    '''
+    if not session:
+        return jsonify({"error": "Not found"}), 404
+    return jsonify({
+        "id": session[0],
+        "notes": session[1],
+        "summary": session[2],
+        "created_at": session[3]
+    })
+
+@app.route("/session/<int:session_id>/delete", methods=["POST"])
+def delete_session_route(session_id):
+    delete_session(session_id)
+    return jsonify({"success": True})
 
 print(__name__)
 if __name__ == "__main__":

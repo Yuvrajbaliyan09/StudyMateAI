@@ -47,4 +47,11 @@ def get_session_by_id(session_id):
     conn.close()
     return session
 
+def delete_session(session_id):
+    conn = sqlite3.connect("studymate.db")
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM sessions WHERE id=?", (session_id,))
+    conn.commit()
+    conn.close()
+
 init_db()
