@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StudyMate AI</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0e0f14;
+    --surface: #16181f;
+    --surface2: #1e2029;
+    --border: #2a2c38;
+    --accent: #6c63ff;
+    --accent2: #00d4aa;
+    --accent3: #ff6b6b;
+    --text: #e8e9f0;
+    --muted: #7a7d8f;
+    --radius: 14px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 15px; min-height: 100vh; }
+
+  /* Layout */
+  .shell { display: grid; grid-template-columns: 260px 1fr; min-height: 100vh; }
+
+  /* Sidebar */
+  .sidebar { background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 0; }
+  .sidebar-logo { padding: 24px 20px 20px; border-bottom: 1px solid var(--border); }
+  .logo-text { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 20px; color: var(--text); letter-spacing: -0.5px; }
+  .logo-dot { color: var(--accent); }
+  .logo-sub { font-size: 11px; color: var(--muted); margin-top: 2px; letter-spacing: 0.05em; }
+  .sidebar-label { font-size: 10px; font-weight: 600; letter-spacing: 0.1em; color: var(--muted); padding: 16px 20px 8px; text-transform: uppercase; }
+  .session-list { flex: 1; overflow-y: auto; padding: 0 10px; }
+  .session-item { padding: 10px 12px; border-radius: 10px; cursor: pointer; margin-bottom: 4px; border: 1px solid transparent; transition: all 0.15s; }
+  .session-item:hover { background: var(--surface2); border-color: var(--border); }
+  .session-item.active { background: #6c63ff18; border-color: var(--accent); }
+  .session-preview { font-size: 12px; color: var(--text); line-height: 1.4; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  .session-date { font-size: 10px; color: var(--muted); margin-top: 4px; }
+  .new-btn { margin: 12px; padding: 10px; background: var(--accent); color: #fff; border: none; border-radius: 10px; font-family: 'DM Sans', sans-serif; font-weight: 500; font-size: 13px; cursor: pointer; transition: opacity 0.15s; }
+  .new-btn:hover { opacity: 0.85; }
+
+  /* Main */
+  .main { display: flex; flex-direction: column; }
+  .topbar { padding: 20px 32px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 16px; }
+  .topbar-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 18px; flex: 1; }
+  .tab-row { display: flex; gap: 6px; }
+  .tab { padding: 6px 16px; border-radius: 8px; border: 1px solid var(--border); background: transparent; color: var(--muted); font-family: 'DM Sans', sans-serif; font-size: 13px; cursor: pointer; transition: all 0.15s; }
+  .tab.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .tab:hover:not(.active) { border-color: var(--accent); color: var(--text); }
+
+  /* Content area */
+  .content { flex: 1; padding: 28px 32px; overflow-y: auto; }
+
+  /* Notes input section */
+  .notes-area { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 20px; }
+  .notes-label { font-size: 11px; font-weight: 600; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 10px; }
+  textarea { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 14px; line-height: 1.7; padding: 14px 16px; resize: vertical; min-height: 160px; outline: none; transition: border-color 0.15s; }
+  textarea:focus { border-color: var(--accent); }
+  textarea::placeholder { color: var(--muted); }
+  .action-row { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+  .btn { padding: 9px 20px; border-radius: 9px; border: none; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s; display: flex; align-items: center; gap: 7px; }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { opacity: 0.85; }
+  .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+  .btn-secondary:hover { border-color: var(--accent2); color: var(--accent2); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* Output cards */
+  .output-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 20px; animation: fadeIn 0.3s ease; }
+  .output-card.teal { border-color: #00d4aa44; }
+  .output-card.purple { border-color: #6c63ff44; }
+  .output-card.red { border-color: #ff6b6b44; }
+  .output-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 14px; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; }
+  .dot-teal { background: var(--accent2); }
+  .dot-purple { background: var(--accent); }
+  .dot-red { background: var(--accent3); }
+  .output-body { font-size: 14px; color: var(--text); line-height: 1.8; white-space: pre-wrap; }
+
+  /* Quiz */
+  .quiz-item { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 12px; }
+  .quiz-q { font-weight: 500; font-size: 14px; margin-bottom: 12px; line-height: 1.5; }
+  .quiz-options { display: flex; flex-direction: column; gap: 7px; }
+  .quiz-opt { padding: 9px 14px; border-radius: 8px; border: 1px solid var(--border); background: transparent; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 13px; cursor: pointer; text-align: left; transition: all 0.15s; }
+  .quiz-opt:hover { border-color: var(--accent); color: var(--accent); }
+  .quiz-opt.correct { background: #00d4aa22; border-color: var(--accent2); color: var(--accent2); }
+  .quiz-opt.wrong { background: #ff6b6b22; border-color: var(--accent3); color: var(--accent3); }
+
+  /* Chat */
+  .chat-messages { max-height: 380px; overflow-y: auto; margin-bottom: 14px; display: flex; flex-direction: column; gap: 12px; }
+  .msg { padding: 12px 16px; border-radius: 10px; font-size: 14px; line-height: 1.7; max-width: 85%; }
+  .msg-user { background: #6c63ff22; border: 1px solid #6c63ff44; color: var(--text); align-self: flex-end; }
+  .msg-ai { background: var(--surface2); border: 1px solid var(--border); color: var(--text); align-self: flex-start; }
+  .chat-input-row { display: flex; gap: 10px; }
+  .chat-input { flex: 1; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 14px; padding: 11px 14px; outline: none; transition: border-color 0.15s; }
+  .chat-input:focus { border-color: var(--accent); }
+  .chat-input::placeholder { color: var(--muted); }
+
+  /* Loading spinner */
+  .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid #ffffff44; border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* Empty state */
+  .empty { text-align: center; padding: 60px 20px; color: var(--muted); }
+  .empty-icon { font-size: 40px; margin-bottom: 16px; }
+  .empty-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 18px; color: var(--text); margin-bottom: 8px; }
+  .empty-sub { font-size: 13px; line-height: 1.6; }
+
+  .hidden { display: none !important; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
+</style>
+</head>
+<body>
+<div class="shell">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-text">StudyMate<span class="logo-dot">.</span>AI</div>
+      <div class="logo-sub">Your intelligent study companion</div>
+    </div>
+    <div class="sidebar-label">Past Sessions</div>
+    <div class="session-list" id="sessionList">
+      {% if sessions %}
+        {% for s in sessions %}
+        <div class="session-item" onclick="loadSession({{ s.id }})" data-id="{{ s.id }}">
+          <div class="session-preview">{{ s.preview }}</div>
+          <div class="session-date">{{ s.created_at }}</div>
+        </div>
+        {% endfor %}
+      {% else %}
+        <div style="padding: 16px 12px; font-size: 12px; color: var(--muted);">No sessions yet. Start studying!</div>
+      {% endif %}
+    </div>
+    <button class="new-btn" onclick="newSession()">+ New Session</button>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+    <div class="topbar">
+      <div class="topbar-title" id="pageTitle">New Study Session</div>
+      <div class="tab-row">
+        <button class="tab active" onclick="switchTab('summary')">Summary</button>
+        <button class="tab" onclick="switchTab('quiz')">Quiz</button>
+        <button class="tab" onclick="switchTab('chat')">Chat</button>
+      </div>
+    </div>
+
+    <div class="content">
+      <!-- Notes input -->
+      <div class="notes-area">
+        <div class="notes-label">Your Notes</div>
+        <textarea id="notesInput" placeholder="Paste your notes here... lecture notes, textbook chapters, anything you want to study."></textarea>
+        <div class="action-row">
+          <button class="btn btn-primary" id="summarizeBtn" onclick="doSummarize()">
+            <span>✦ Summarize</span>
+          </button>
+          <button class="btn btn-secondary" id="quizBtn" onclick="doQuiz()">
+            <span>Generate Quiz</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Summary tab -->
+      <div id="tab-summary">
+        <div id="summaryOut" class="hidden"></div>
+        <div id="summaryEmpty" class="empty">
+          <div class="empty-icon">✦</div>
+          <div class="empty-title">Paste your notes above</div>
+          <div class="empty-sub">Click Summarize and StudyMate AI will break<br>your notes into clear, digestible key points.</div>
+        </div>
+      </div>
+
+      <!-- Quiz tab -->
+      <div id="tab-quiz" class="hidden">
+        <div id="quizOut" class="hidden"></div>
+        <div id="quizEmpty" class="empty">
+          <div class="empty-icon">◆</div>
+          <div class="empty-title">No quiz yet</div>
+          <div class="empty-sub">Paste your notes and click "Generate Quiz"<br>to test your understanding.</div>
+        </div>
+      </div>
+
+      <!-- Chat tab -->
+      <div id="tab-chat" class="hidden">
+        <div class="output-card purple">
+          <div class="output-title"><span class="dot dot-purple"></span> Chat with your Notes</div>
+          <div class="chat-messages" id="chatMessages">
+            <div class="msg msg-ai">Hi! Paste your notes above and ask me anything about them. I'll help you understand the material better.</div>
+          </div>
+          <div class="chat-input-row">
+            <input class="chat-input" id="chatInput" type="text" placeholder="Ask something about your notes..." onkeydown="if(event.key==='Enter') doChat()">
+            <button class="btn btn-primary" onclick="doChat()" id="chatBtn">Send</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+  let currentSessionId = null;
+  let currentTab = 'summary';
+  let chatHistory = [];
+
+  function switchTab(tab) {
+    currentTab = tab;
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    event.target.classList.add('active');
+    ['summary','quiz','chat'].forEach(t => {
+      document.getElementById('tab-'+t).classList.toggle('hidden', t !== tab);
+    });
+  }
+
+  function newSession() {
+    currentSessionId = null;
+    chatHistory = [];
+    document.getElementById('notesInput').value = '';
+    document.getElementById('summaryOut').classList.add('hidden');
+    document.getElementById('summaryEmpty').classList.remove('hidden');
+    document.getElementById('quizOut').classList.add('hidden');
+    document.getElementById('quizEmpty').classList.remove('hidden');
+    document.getElementById('chatMessages').innerHTML = '<div class="msg msg-ai">Hi! Paste your notes above and ask me anything about them.</div>';
+    document.getElementById('pageTitle').textContent = 'New Study Session';
+    document.querySelectorAll('.session-item').forEach(i => i.classList.remove('active'));
+    switchTabByName('summary');
+  }
+
+  function switchTabByName(tab) {
+    currentTab = tab;
+    document.querySelectorAll('.tab').forEach((t,i) => {
+      const tabs = ['summary','quiz','chat'];
+      t.classList.toggle('active', tabs[i] === tab);
+    });
+    ['summary','quiz','chat'].forEach(t => {
+      document.getElementById('tab-'+t).classList.toggle('hidden', t !== tab);
+    });
+  }
+
+  async function doSummarize() {
+    const notes = document.getElementById('notesInput').value.trim();
+    if (!notes) { alert('Please paste some notes first!'); return; }
+    const btn = document.getElementById('summarizeBtn');
+    btn.innerHTML = '<span class="spinner"></span> Summarizing...';
+    btn.disabled = true;
+
+    const res = await fetch('/summarize', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({notes})
+    });
+    const data = await res.json();
+    btn.innerHTML = '<span>✦ Summarize</span>';
+    btn.disabled = false;
+
+    if (data.error) { alert(data.error); return; }
+    currentSessionId = data.session_id;
+
+    document.getElementById('summaryEmpty').classList.add('hidden');
+    document.getElementById('summaryOut').classList.remove('hidden');
+    document.getElementById('summaryOut').innerHTML = `
+      <div class="output-card teal">
+        <div class="output-title"><span class="dot dot-teal"></span> AI Summary</div>
+        <div class="output-body">${escHtml(data.summary)}</div>
+      </div>`;
+    refreshSidebar();
+    switchTabByName('summary');
+  }
+
+  async function doQuiz() {
+    const notes = document.getElementById('notesInput').value.trim();
+    if (!notes) { alert('Please paste some notes first!'); return; }
+    const btn = document.getElementById('quizBtn');
+    btn.innerHTML = '<span class="spinner"></span> Generating...';
+    btn.disabled = true;
+
+    const res = await fetch('/quiz', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({notes, session_id: currentSessionId})
+    });
+    const data = await res.json();
+    btn.innerHTML = '<span>Generate Quiz</span>';
+    btn.disabled = false;
+
+    if (data.error) { alert(data.error); return; }
+
+    document.getElementById('quizEmpty').classList.add('hidden');
+    document.getElementById('quizOut').classList.remove('hidden');
+
+    let html = `<div class="output-card purple"><div class="output-title"><span class="dot dot-purple"></span> Quiz — ${data.questions.length} Questions</div>`;
+    data.questions.forEach((q, i) => {
+      html += `<div class="quiz-item">
+        <div class="quiz-q">${i+1}. ${escHtml(q.question)}</div>
+        <div class="quiz-options">`;
+      (q.options || []).forEach(opt => {
+        if (!opt) return;
+        html += `<button class="quiz-opt" onclick="answerQuiz(this, '${escHtml(opt)}', '${escHtml(q.answer)}')">${escHtml(opt)}</button>`;
+      });
+      html += `</div></div>`;
+    });
+    html += `</div>`;
+    document.getElementById('quizOut').innerHTML = html;
+    switchTabByName('quiz');
+  }
+
+  function answerQuiz(btn, selected, correct) {
+    const parent = btn.closest('.quiz-options');
+    parent.querySelectorAll('.quiz-opt').forEach(b => b.disabled = true);
+    if (selected === correct) {
+      btn.classList.add('correct');
+    } else {
+      btn.classList.add('wrong');
+      parent.querySelectorAll('.quiz-opt').forEach(b => {
+        if (b.textContent.trim() === correct) b.classList.add('correct');
+      });
+    }
+  }
+
+  async function doChat() {
+    const notes = document.getElementById('notesInput').value.trim();
+    const message = document.getElementById('chatInput').value.trim();
+    if (!notes) { alert('Please paste your notes first!'); return; }
+    if (!message) return;
+
+    const chatBox = document.getElementById('chatMessages');
+    chatBox.innerHTML += `<div class="msg msg-user">${escHtml(message)}</div>`;
+    chatBox.innerHTML += `<div class="msg msg-ai" id="aiTyping"><span class="spinner"></span> Thinking...</div>`;
+    chatBox.scrollTop = chatBox.scrollHeight;
+    document.getElementById('chatInput').value = '';
+    document.getElementById('chatBtn').disabled = true;
+
+    chatHistory.push({role: 'user', content: message});
+
+    const res = await fetch('/chat', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({notes, message, history: chatHistory})
+    });
+    const data = await res.json();
+    document.getElementById('chatBtn').disabled = false;
+    document.getElementById('aiTyping').outerHTML = `<div class="msg msg-ai">${escHtml(data.reply || 'Sorry, something went wrong.')}</div>`;
+    chatHistory.push({role: 'assistant', content: data.reply || ''});
+    chatBox.scrollTop = chatBox.scrollHeight;
+  }
+
+  async function loadSession(id) {
+    const res = await fetch(`/session/${id}`);
+    const data = await res.json();
+    if (data.error) return;
+
+    currentSessionId = id;
+    chatHistory = data.chat_history || [];
+    document.getElementById('notesInput').value = data.notes || '';
+    document.getElementById('pageTitle').textContent = `Session #${id}`;
+    document.querySelectorAll('.session-item').forEach(i => i.classList.toggle('active', parseInt(i.dataset.id) === id));
+
+    if (data.summary) {
+      document.getElementById('summaryEmpty').classList.add('hidden');
+      document.getElementById('summaryOut').classList.remove('hidden');
+      document.getElementById('summaryOut').innerHTML = `
+        <div class="output-card teal">
+          <div class="output-title"><span class="dot dot-teal"></span> AI Summary</div>
+          <div class="output-body">${escHtml(data.summary)}</div>
+        </div>`;
+    }
+    if (data.quiz && data.quiz.length) {
+      document.getElementById('quizEmpty').classList.add('hidden');
+      document.getElementById('quizOut').classList.remove('hidden');
+      let html = `<div class="output-card purple"><div class="output-title"><span class="dot dot-purple"></span> Quiz — ${data.quiz.length} Questions</div>`;
+      data.quiz.forEach((q,i) => {
+        html += `<div class="quiz-item"><div class="quiz-q">${i+1}. ${escHtml(q.question)}</div><div class="quiz-options">`;
+        (q.options||[]).forEach(opt => {
+          if(!opt) return;
+          html += `<button class="quiz-opt" onclick="answerQuiz(this,'${escHtml(opt)}','${escHtml(q.answer)}')">${escHtml(opt)}</button>`;
+        });
+        html += `</div></div>`;
+      });
+      html += `</div>`;
+      document.getElementById('quizOut').innerHTML = html;
+    }
+    switchTabByName('summary');
+  }
+
+  async function refreshSidebar() {
+    const res = await fetch('/sessions');
+    const sessions = await res.json();
+    const list = document.getElementById('sessionList');
+    list.innerHTML = sessions.map(s => `
+      <div class="session-item ${s.id === currentSessionId ? 'active' : ''}" onclick="loadSession(${s.id})" data-id="${s.id}">
+        <div class="session-preview">${escHtml(s.preview)}</div>
+        <div class="session-date">${s.created_at}</div>
+      </div>`).join('');
+  }
+
+  function escHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+</script>
+</body>
+</html>

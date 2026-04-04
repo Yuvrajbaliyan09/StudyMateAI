@@ -1,40 +1,50 @@
-from flask import Flask
-from test_gemini import ai_service
-from test_gemini import generate_quiz
-from test_gemini import chat_with_notes
+from flask import Flask,request,render_template ,jsonify
+from database import init_db, save_session, get_sessions, get_session_by_id
+from test_gemini import ai_service ,generate_quiz , chat_with_notes
+import json
 app = Flask(__name__)
+init_db()
 
 @app.route("/")
 def box():
-    return'''<form method="POST" action="/summarize">
-    <textarea name="notes" rows="10" cols="50"></textarea>
-    <button type="submit">Summarize</button>
-    </form>
-
-    <form method="POST" action="/quiz">
-    <textarea name="notes" rows="10" cols="50"></textarea>
-    <button type="submit"> Make Quiz</button>
-    </form>
-
-    <form method="POST" action="/chat">
-    <textarea name="notes" rows="10" cols="50"></textarea>
-    <textarea name="Question" placeholder ="Ask a Question" rows="7" cols="30"></textarea>
-    <button type="submit"> Answer</button>
-    </form>'''
+    sessions = get_sessions()
+    return render_template("index.html",sessions=sessions)
 
 @app.route("/summarize", methods=["POST"])
 def summarize():
-    from flask import request
-    notes = request.form["notes"]
+    data = request.get_json()
+
+    notes = data.get("notes","")
+    if not notes:
+        return jsonify({"error":"No notes provided"}),400
     result = ai_service(notes)
-    return result
+    session_id = save_session(notes,result)
+    return jsonify({"summary": result ,"session_id":session_id})
+
 
 @app.route("/quiz",methods=["POST"] )
 def quiz():
-    from flask import request
-    notes = request.form["notes"]
+    data = request.get_json()
+    notes = data.get("notes","")
+    if not notes:
+        return jsonify({"error": "No notes provided"}),400
+    
     result = generate_quiz(notes)
-    return result
+    questions = json.loads(result)
+    
+    session_id = save_session(notes,result)
+    return jsonify({"questions":questions, "session_id": session_id})
+  
+
+@app.route("/answers", methods=["POST"])
+def show_answers():
+    from flask import request
+    answers = request.form["answers"]
+    return f'''
+        <h2>Correct Answers</h2>
+        <pre>{answers}</pre>
+        <a href="/">Go Back</a>
+    '''
 
 @app.route("/chat",methods=["POST"])
 def chat():
@@ -42,7 +52,23 @@ def chat():
     notes = request.form["notes"]
     question = request.form["Question"]
     result = chat_with_notes(notes,question)
-    return result
+    save_session(notes,result)
+    return f'''
+        <h2>Chat With Notes</h2>
+        <p>{result}</p>
+        <a href="/">Go Back</a>
+    '''
+@app.route("/session/<int:session_id>")
+def view_session(session_id):
+    session = get_session_by_id(session_id)
+    return f'''
+        <h2>Session {session[0]}</h2>
+        <h3>Notes:</h3>
+        <pre>{session[1]}</pre>
+        <h3>Summary:</h3>
+        <pre>{session[2]}</pre>
+        <a href="/">Go Back</a>
+    '''
 
 print(__name__)
 if __name__ == "__main__":

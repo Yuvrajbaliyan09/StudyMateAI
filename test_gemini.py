@@ -20,10 +20,20 @@ def ai_service(notes):
 def generate_quiz(notes):
     response = client.chat.completions.create(
         model="llama-3.3-70b-versatile",
-        messages=[
-    {"role": "user", "content": f'''Create 5 multiple choice questions from these notes.each question must have 4 options (A, B, C, D) and indicate the correct answer.
-    Notes: {notes}'''}
-    ])
+        messages=[{
+            "role": "user",
+            "content": f"""Create 5 multiple choice questions from these notes.
+                Return ONLY a JSON array, no extra text, no markdown, exactly like this:
+            [
+            {{
+        "question": "question here",
+        "options": ["A) option", "B) option", "C) option", "D) option"],
+        "answer": "A) option"
+        }}
+        ]
+        Notes: {notes}"""
+                }]
+        )
     return response.choices[0].message.content
 
 def chat_with_notes(notes,Question):
