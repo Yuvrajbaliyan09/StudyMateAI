@@ -36,28 +36,19 @@ def quiz():
     return jsonify({"questions":questions, "session_id": session_id})
   
 
-@app.route("/answers", methods=["POST"])
-def show_answers():
-    from flask import request
-    answers = request.form["answers"]
-    return f'''
-        <h2>Correct Answers</h2>
-        <pre>{answers}</pre>
-        <a href="/">Go Back</a>
-    '''
-
 @app.route("/chat",methods=["POST"])
 def chat():
-    from flask import request
-    notes = request.form["notes"]
-    question = request.form["Question"]
+    data = request.get_json()
+    notes = data.get("notes","")
+    if not notes:
+        return jsonify({"error":"Please Provide Notes"}),400
+    
+    question = data.get("message","")
     result = chat_with_notes(notes,question)
-    save_session(notes,result)
-    return f'''
-        <h2>Chat With Notes</h2>
-        <p>{result}</p>
-        <a href="/">Go Back</a>
-    '''
+    session_id = save_session(notes,result)
+
+    return jsonify({"reply":result , "session_id": session_id})
+
 @app.route("/session/<int:session_id>")
 def view_session(session_id):
     session = get_session_by_id(session_id)
