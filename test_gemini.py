@@ -7,8 +7,6 @@ api_key = os.getenv("API_KEY")
 client = Groq(api_key=api_key)
 
 def ai_service(notes):
-
-
     response = client.chat.completions.create(
         model="llama-3.3-70b-versatile",
         messages=[

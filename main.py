@@ -5,11 +5,13 @@ import json
 app = Flask(__name__)
 init_db()
 
+#Root Route or Main Route
 @app.route("/")
 def box():
     sessions = get_sessions()
     return render_template("index.html",sessions=sessions)
 
+#Summarize Route
 @app.route("/summarize", methods=["POST"])
 def summarize():
     data = request.get_json()
@@ -21,7 +23,7 @@ def summarize():
     session_id = save_session(notes,result)
     return jsonify({"summary": result ,"session_id":session_id})
 
-
+#Quiz Route
 @app.route("/quiz",methods=["POST"] )
 def quiz():
     data = request.get_json()
@@ -35,7 +37,7 @@ def quiz():
     session_id = save_session(notes,result)
     return jsonify({"questions":questions, "session_id": session_id})
   
-
+#Chat Route
 @app.route("/chat",methods=["POST"])
 def chat():
     data = request.get_json()
@@ -49,6 +51,7 @@ def chat():
 
     return jsonify({"reply":result , "session_id": session_id})
 
+#Show Session Route
 @app.route("/sessions")
 def sessions():
     rows = get_sessions()
@@ -61,6 +64,7 @@ def sessions():
         })
     return jsonify(result)
 
+#Veiw Session Route
 @app.route("/session/<int:session_id>")
 def view_session(session_id):
     session = get_session_by_id(session_id)
@@ -73,6 +77,7 @@ def view_session(session_id):
         "created_at": session[3]
     })
 
+#Delete Session Route
 @app.route("/session/<int:session_id>/delete", methods=["POST"])
 def delete_session_route(session_id):
     delete_session(session_id)
@@ -80,4 +85,4 @@ def delete_session_route(session_id):
 
 print(__name__)
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=True) #Run app while debug on
