@@ -10,15 +10,13 @@ def init_db():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             notes TEXT,
             summary TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            name TEXT,
+            user_id INTEGER
         )
     """)
     # Add name column if it doesn't exist (for existing databases)
-    try:
-        cursor.execute("ALTER TABLE sessions ADD COLUMN name TEXT")
-    except:
-        pass
-    
+
     try:
         cursor.execute("ALTER TABLE sessions ADD COLUMN name TEXT")
     except:
@@ -110,5 +108,26 @@ def get_quiz_stats():
     rows = cursor.fetchall()
     conn.close()
     return rows
+
+def get_or_create_user(google_id, name, email):
+    conn = sqlite3.connect("studymate.db")
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM users WHERE google_id = ?", (google_id,))
+    user = cursor.fetchone()
+    if not user:
+        cursor.execute("INSERT INTO users (google_id, name, email) VALUES (?, ?, ?)", (google_id, name, email))
+        conn.commit()
+        cursor.execute("SELECT * FROM users WHERE google_id = ?", (google_id,))
+        user = cursor.fetchone()
+    conn.close()
+    return user
+
+def get_user_by_id(user_id):
+    conn = sqlite3.connect("studymate.db")
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM users WHERE id = ?", (user_id,))
+    user = cursor.fetchone()
+    conn.close()
+    return user
 
 init_db()

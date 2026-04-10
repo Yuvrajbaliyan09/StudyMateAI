@@ -137,7 +137,15 @@
         <div style="padding: 16px 12px; font-size: 12px; color: var(--muted);">No sessions yet. Start studying!</div>
       {% endif %}
     </div>
+    <div style="padding: 0 12px 8px; font-size: 12px; color: var(--muted); text-align:center;">
+      👋 {{ user[2] }}
+    </div>
     <button class="new-btn" onclick="newSession()">+ New Session</button>
+    <a href="/logout" style="margin: 0 12px 12px; padding: 8px; background: transparent; 
+      color: var(--accent3); border: 1px solid var(--accent3); border-radius: 10px; 
+      font-size: 13px; cursor: pointer; text-align:center; text-decoration:none; display:block;">
+      Logout
+    </a>
   </aside>
 
   <!-- Main -->
