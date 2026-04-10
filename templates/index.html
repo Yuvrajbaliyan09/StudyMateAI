@@ -145,6 +145,7 @@
     <div class="topbar">
       <div class="topbar-title" id="pageTitle">New Study Session</div>
       <div class="tab-row">
+        <button class="tab" onclick="switchTab('stats')">📊 Stats</button>
         <button class="tab active" onclick="switchTab('summary')">Summary</button>
         <button class="tab" onclick="switchTab('quiz')">Quiz</button>
         <button class="tab" onclick="switchTab('chat')">Chat</button>
@@ -154,7 +155,16 @@
     <div class="content">
       <!-- Notes input -->
       <div class="notes-area">
-        <div class="notes-label">Your Notes</div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+    <div class="notes-label" style="margin-bottom:0">Your Notes</div>
+    <label for="fileUpload" style="cursor:pointer; font-size:12px; color:var(--accent); 
+        border:1px solid var(--accent); padding:4px 12px; border-radius:7px; transition:all 0.15s;"
+        onmouseover="this.style.background='#6c63ff22'" onmouseout="this.style.background='transparent'">
+        📎 Upload PDF / Image
+    </label>
+    <input type="file" id="fileUpload" accept=".pdf,.png,.jpg,.jpeg,.webp" 
+        style="display:none" onchange="handleUpload(this)">
+</div>
         <textarea id="notesInput" placeholder="Paste your notes here... lecture notes, textbook chapters, anything you want to study."></textarea>
         <div class="action-row">
           <button class="btn btn-primary" id="summarizeBtn" onclick="doSummarize()">
@@ -185,6 +195,21 @@
           <div class="empty-sub">Paste your notes and click "Generate Quiz"<br>to test your understanding.</div>
         </div>
       </div>
+       <!-- Stats tab -->
+    <div id="tab-stats" class="hidden">
+    <div class="output-card purple">
+        <div class="output-title"><span class="dot dot-purple"></span> Quiz Performance Over Time</div>
+        <div id="statsEmpty" class="empty">
+            <div class="empty-icon">📊</div>
+            <div class="empty-title">No quiz attempts yet</div>
+            <div class="empty-sub">Take a quiz to start tracking your performance.</div>
+        </div>
+        <div id="statsChart" class="hidden">
+            <canvas id="performanceChart" height="120"></canvas>
+            <div id="statsInfo" style="margin-top:16px; display:flex; gap:16px; flex-wrap:wrap;"></div>
+        </div>
+    </div>
+  </div>
 
       <!-- Chat tab -->
       <div id="tab-chat" class="hidden">
@@ -196,13 +221,15 @@
           <div class="chat-input-row">
             <input class="chat-input" id="chatInput" type="text" placeholder="Ask something about your notes..." onkeydown="if(event.key==='Enter') doChat()">
             <button class="btn btn-primary" onclick="doChat()" id="chatBtn">Send</button>
+            
           </div>
         </div>
       </div>
     </div>
   </main>
 </div>
-
+   
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
   let currentSessionId = null;
   let currentTab = 'summary';
@@ -212,9 +239,10 @@
     currentTab = tab;
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
     event.target.classList.add('active');
-    ['summary','quiz','chat'].forEach(t => {
+    ['summary','quiz','chat','stats'].forEach(t => {
       document.getElementById('tab-'+t).classList.toggle('hidden', t !== tab);
     });
+    if (tab === 'stats') loadStats();
   }
 
   function newSession() {
@@ -234,13 +262,13 @@
   function switchTabByName(tab) {
     currentTab = tab;
     document.querySelectorAll('.tab').forEach((t,i) => {
-      const tabs = ['summary','quiz','chat'];
-      t.classList.toggle('active', tabs[i] === tab);
+        const tabs = ['summary','quiz','chat','stats'];
+        t.classList.toggle('active', tabs[i] === tab);
     });
-    ['summary','quiz','chat'].forEach(t => {
-      document.getElementById('tab-'+t).classList.toggle('hidden', t !== tab);
+    ['summary','quiz','chat','stats'].forEach(t => {
+        document.getElementById('tab-'+t).classList.toggle('hidden', t !== tab);
     });
-  }
+}
 
   async function doSummarize() {
     const notes = document.getElementById('notesInput').value.trim();
@@ -306,21 +334,59 @@
     });
     html += `</div>`;
     document.getElementById('quizOut').innerHTML = html;
+    quizAnswers = { correct: 0, wrong: 0, total: data.questions.length, answered: 0 };
     switchTabByName('quiz');
   }
 
-  function answerQuiz(btn, selected, correct) {
+  let quizAnswers = { correct: 0, wrong: 0, total: 0, answered: 0 };
+
+function answerQuiz(btn, selected, correct) {
     const parent = btn.closest('.quiz-options');
     parent.querySelectorAll('.quiz-opt').forEach(b => b.disabled = true);
+    quizAnswers.answered++;
     if (selected === correct) {
-      btn.classList.add('correct');
+        btn.classList.add('correct');
+        quizAnswers.correct++;
     } else {
-      btn.classList.add('wrong');
-      parent.querySelectorAll('.quiz-opt').forEach(b => {
-        if (b.textContent.trim() === correct) b.classList.add('correct');
-      });
+        btn.classList.add('wrong');
+        quizAnswers.wrong++;
+        parent.querySelectorAll('.quiz-opt').forEach(b => {
+            if (b.textContent.trim() === correct) b.classList.add('correct');
+        });
     }
-  }
+    // Check if all questions answered
+    if (quizAnswers.answered === quizAnswers.total) {
+        saveQuizScore();
+    }
+}
+
+async function saveQuizScore() {
+    const pct = Math.round((quizAnswers.correct / quizAnswers.total) * 100);
+    
+    // Show score banner
+    const scoreHtml = `
+        <div style="background:var(--surface2); border:1px solid var(--border); border-radius:10px; 
+            padding:16px; margin-top:16px; text-align:center;">
+            <div style="font-family:'Syne',sans-serif; font-size:22px; font-weight:700; color:${pct>=60?'var(--accent2)':'var(--accent3)'}">
+                ${quizAnswers.correct}/${quizAnswers.total} — ${pct}%
+            </div>
+            <div style="font-size:13px; color:var(--muted); margin-top:4px;">
+                ${pct>=80?'🔥 Excellent!':pct>=60?'👍 Good job!':'📚 Keep studying!'}
+            </div>
+        </div>`;
+    document.getElementById('quizOut').innerHTML += scoreHtml;
+
+    // Save to DB
+    await fetch('/quiz/save-score', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            session_id: currentSessionId,
+            score: quizAnswers.correct,
+            total: quizAnswers.total
+        })
+    });
+}
 
   async function doChat() {
     const notes = document.getElementById('notesInput').value.trim();
@@ -357,7 +423,7 @@
     currentSessionId = id;
     chatHistory = data.chat_history || [];
     document.getElementById('notesInput').value = data.notes || '';
-    document.getElementById('pageTitle').textContent = `Session #${id}`;
+    document.getElementById('pageTitle').textContent = `Study Session`;
     document.querySelectorAll('.session-item').forEach(i => i.classList.toggle('active', parseInt(i.dataset.id) === id));
 
     if (data.summary) {
@@ -423,6 +489,105 @@
   function escHtml(str) {
     if (!str) return '';
     return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+  
+  async function handleUpload(input) {
+    const file = input.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    // Show loading state
+    const label = document.querySelector('label[for="fileUpload"]');
+    label.textContent = '⏳ Extracting...';
+
+    const res = await fetch('/upload', {
+        method: 'POST',
+        body: formData
+    });
+    const data = await res.json();
+
+    label.textContent = '📎 Upload PDF / Image';
+    input.value = ''; // reset input
+
+    if (data.error) {
+        alert(data.error);
+        return;
+    }
+
+    // Fill notes textarea
+    document.getElementById('notesInput').value = data.text;
+    alert('✅ Text extracted! You can now Summarize, Quiz or Chat.');
+  }
+  async function loadStats() {
+    const res = await fetch('/quiz/stats');
+    const stats = await res.json();
+    
+    if (stats.length === 0) {
+        document.getElementById('statsEmpty').classList.remove('hidden');
+        document.getElementById('statsChart').classList.add('hidden');
+        return;
+    }
+
+    document.getElementById('statsEmpty').classList.add('hidden');
+    document.getElementById('statsChart').classList.remove('hidden');
+
+    const labels = stats.map((s, i) => `Quiz ${i+1}`);
+    const scores = stats.map(s => s.percentage);
+
+    // Destroy old chart if exists
+    if (window.perfChart) window.perfChart.destroy();
+
+    const ctx = document.getElementById('performanceChart').getContext('2d');
+    window.perfChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [{
+                label: 'Score %',
+                data: scores,
+                borderColor: '#6c63ff',
+                backgroundColor: '#6c63ff22',
+                borderWidth: 2,
+                pointBackgroundColor: '#6c63ff',
+                pointRadius: 5,
+                fill: true,
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    min: 0, max: 100,
+                    ticks: { color: '#7a7d8f', callback: v => v+'%' },
+                    grid: { color: '#2a2c38' }
+                },
+                x: { ticks: { color: '#7a7d8f' }, grid: { color: '#2a2c38' } }
+            },
+            plugins: {
+                legend: { labels: { color: '#e8e9f0' } }
+            }
+        }
+    });
+
+    // Summary stats
+    const avg = Math.round(scores.reduce((a,b) => a+b, 0) / scores.length);
+    const best = Math.max(...scores);
+    document.getElementById('statsInfo').innerHTML = `
+        <div style="background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:12px 20px; text-align:center;">
+            <div style="font-size:22px; font-weight:700; color:var(--accent)">${avg}%</div>
+            <div style="font-size:11px; color:var(--muted)">Average Score</div>
+        </div>
+        <div style="background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:12px 20px; text-align:center;">
+            <div style="font-size:22px; font-weight:700; color:var(--accent2)">${best}%</div>
+            <div style="font-size:11px; color:var(--muted)">Best Score</div>
+        </div>
+        <div style="background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:12px 20px; text-align:center;">
+            <div style="font-size:22px; font-weight:700; color:var(--text)">${stats.length}</div>
+            <div style="font-size:11px; color:var(--muted)">Total Attempts</div>
+        </div>`;
   }
 </script>
 </body>

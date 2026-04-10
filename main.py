@@ -1,7 +1,12 @@
 from flask import Flask,request,render_template ,jsonify
-from database import init_db, save_session, get_sessions, get_session_by_id,delete_session
+from database import init_db, save_session, get_sessions, get_session_by_id,delete_session,save_quiz_result,get_quiz_stats
 from test_gemini import ai_service ,generate_quiz , chat_with_notes
 import json
+import fitz  # pymupdf
+from PIL import Image
+import pytesseract
+import io
+
 app = Flask(__name__)
 init_db()
 
@@ -83,6 +88,59 @@ def delete_session_route(session_id):
     delete_session(session_id)
     return jsonify({"success": True})
 
+@app.route("/upload", methods=["POST"])
+def upload_file():
+    if 'file' not in request.files:
+        return jsonify({"error": "No file uploaded"}), 400
+    
+    file = request.files['file']
+    filename = file.filename.lower()
+    
+    try:
+        if filename.endswith('.pdf'):
+            # PDF extraction
+            pdf_bytes = file.read()
+            doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+            text = ""
+            for page in doc:
+                text += page.get_text()
+            doc.close()
+            
+        elif filename.endswith(('.png', '.jpg', '.jpeg', '.webp')):
+            # Image OCR
+            img = Image.open(io.BytesIO(file.read()))
+            text = pytesseract.image_to_string(img)
+            
+        else:
+            return jsonify({"error": "Only PDF and images supported"}), 400
+        
+        if not text.strip():
+            return jsonify({"error": "Could not extract text from file"}), 400
+            
+        return jsonify({"text": text.strip()})
+    
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    
+@app.route("/quiz/save-score", methods=["POST"])
+def save_score():
+    data = request.get_json()
+    save_quiz_result(data.get("session_id"), data.get("score"), data.get("total"))
+    return jsonify({"success": True})
+
+@app.route("/quiz/stats")
+def quiz_stats():
+    rows = get_quiz_stats()
+    result = []
+    for row in rows:
+        result.append({
+            "score": row[0],
+            "total": row[1],
+            "created_at": row[2],
+            "percentage": round((row[0] / row[1]) * 100)
+        })
+    return jsonify(result)
+    
 print(__name__)
 if __name__ == "__main__":
-    app.run(debug=True) #Run app while debug on
+    app.run(debug=True) #Run app and debug

@@ -1,5 +1,6 @@
 import sqlite3
 
+
 def init_db():
     conn = sqlite3.connect("studymate.db")
     cursor = conn.cursor()
@@ -9,6 +10,20 @@ def init_db():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             notes TEXT,
             summary TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    # Add name column if it doesn't exist (for existing databases)
+    try:
+        cursor.execute("ALTER TABLE sessions ADD COLUMN name TEXT")
+    except:
+        pass
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS quiz_results (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            session_id INTEGER,
+            score INTEGER,
+            total INTEGER,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
@@ -33,7 +48,7 @@ def get_sessions():
     conn = sqlite3.connect("studymate.db")
     cursor = conn.cursor()
         
-    cursor.execute("SELECT id, notes, created_at FROM sessions Order by id DESC")
+    cursor.execute("SELECT id, notes, created_at, name FROM sessions Order by id DESC")
     rows = cursor.fetchall()
     
     conn.close()
@@ -53,5 +68,34 @@ def delete_session(session_id):
     cursor.execute("DELETE FROM sessions WHERE id=?", (session_id,))
     conn.commit()
     conn.close()
+
+def rename_session(session_id, new_name):
+    conn = sqlite3.connect("studymate.db")
+    cursor = conn.cursor()
+    cursor.execute("UPDATE sessions SET name = ? WHERE id = ?", (new_name, session_id))
+    conn.commit()
+    conn.close()
+    
+def save_quiz_result(session_id, score, total):
+    conn = sqlite3.connect("studymate.db")
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO quiz_results (session_id, score, total)
+        VALUES (?, ?, ?)
+    """, (session_id, score, total))
+    conn.commit()
+    conn.close()
+
+def get_quiz_stats():
+    conn = sqlite3.connect("studymate.db")
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT score, total, created_at 
+        FROM quiz_results 
+        ORDER BY created_at ASC
+    """)
+    rows = cursor.fetchall()
+    conn.close()
+    return rows
 
 init_db()
