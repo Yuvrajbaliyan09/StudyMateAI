@@ -18,6 +18,11 @@ def init_db():
         cursor.execute("ALTER TABLE sessions ADD COLUMN name TEXT")
     except:
         pass
+    
+    try:
+        cursor.execute("ALTER TABLE sessions ADD COLUMN name TEXT")
+    except:
+        pass
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS quiz_results (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -27,30 +32,38 @@ def init_db():
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        google_id TEXT UNIQUE,
+        name TEXT,
+        email TEXT UNIQUE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+    """)
     conn.commit()
     conn.close()
 
-def save_session(notes, summary):
+def save_session(notes, summary, user_id=None):
     conn = sqlite3.connect("studymate.db")
     cursor = conn.cursor()
-        
     cursor.execute("""
-        INSERT INTO sessions (notes, summary)
-        VALUES (?, ?)
-    """, (notes, summary))
-
+        INSERT INTO sessions (notes, summary, user_id)
+        VALUES (?, ?, ?)
+    """, (notes, summary, user_id))
     conn.commit()
-    session_id = cursor.lastrowid 
+    session_id = cursor.lastrowid
     conn.close()
     return session_id
 
-def get_sessions():
+def get_sessions(user_id=None):
     conn = sqlite3.connect("studymate.db")
     cursor = conn.cursor()
-        
-    cursor.execute("SELECT id, notes, created_at, name FROM sessions Order by id DESC")
+    if user_id:
+        cursor.execute("SELECT id, notes, created_at, name FROM sessions WHERE user_id = ? ORDER BY id DESC", (user_id,))
+    else:
+        cursor.execute("SELECT id, notes, created_at, name FROM sessions ORDER BY id DESC")
     rows = cursor.fetchall()
-    
     conn.close()
     return rows
 
