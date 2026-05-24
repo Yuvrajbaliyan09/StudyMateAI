@@ -1,5 +1,9 @@
 import os
 import psycopg2
+from dotenv import load_dotenv
+
+load_dotenv()
+
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 def get_conn():
@@ -169,3 +173,12 @@ def reset_quiz_stats(user_id):
     conn.commit()
     cursor.close()
     conn.close()
+
+def update_session(session_id, notes, summary):
+    conn = get_conn()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE sessions SET notes = %s, summary = %s WHERE id = %s", (notes, summary, session_id))
+    conn.commit()
+    cursor.close()
+    conn.close()
+    

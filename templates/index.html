@@ -128,9 +128,15 @@
     <div class="session-list" id="sessionList">
       {% if sessions %}
         {% for s in sessions %}
-        <div class="session-item" onclick="loadSession({{ s.id }})" data-id="{{ s.id }}">
-          <div class="session-preview">{{ s.preview }}</div>
-          <div class="session-date">{{ s.created_at }}</div>
+        <div class="session-item" data-id="{{ s.id }}">
+          <div onclick="loadSession({{ s.id }})" style="flex:1; cursor:pointer;">
+            <div class="session-preview">{{ s.name if s.name else s.preview }}</div>
+            <div class="session-date">{{ s.created_at }}</div>
+          </div>
+          <div style="display:flex; gap:4px; margin-top:6px;">
+            <button onclick="renameSession({{ s.id }})" style="background:transparent; border:1px solid var(--border); color:var(--muted); padding:3px 8px; border-radius:6px; cursor:pointer; font-size:11px;">✏️</button>
+            <button onclick="deleteSession({{ s.id }})" style="background:transparent; border:1px solid var(--border); color:var(--muted); padding:3px 8px; border-radius:6px; cursor:pointer; font-size:11px;">🗑</button>
+          </div>
         </div>
         {% endfor %}
       {% else %}
@@ -469,22 +475,35 @@ async function saveQuizScore() {
     refreshSidebar();
     newSession();
   }
+  async function renameSession(id) {
+    const newName = prompt("Enter new name:");
+    if (!newName || !newName.trim()) return;
+    await fetch(`/session/${id}/rename`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newName.trim() })
+    });
+    const item = document.querySelector(`.session-item[data-id="${id}"] .session-preview`);
+    if (item) item.textContent = newName.trim();
+  }
 
   async function refreshSidebar() {
     const res = await fetch('/sessions');
     const sessions = await res.json();
     const list = document.getElementById('sessionList');
-    list.innerHTML = sessions.map(s => `
-    <div class="session-item ..." onclick="loadSession(${s.id})" data-id="${s.id}">
-        <div class="session-preview">${escHtml(s.preview)}</div>
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-            <div class="session-date">${s.created_at}</div>
-            <button onclick="event.stopPropagation(); deleteSession(${s.id})" 
-                style="background:none; border:none; color:#ff6b6b; cursor:pointer; font-size:11px;">
-                delete
-            </button>
-        </div>
-    </div>`).join('');
+    list.innerHTML = sessions.length === 0 
+        ? '<div style="padding: 16px 12px; font-size: 12px; color: var(--muted);">No sessions yet. Start studying!</div>'
+        : sessions.map(s => `
+        <div class="session-item" data-id="${s.id}">
+            <div onclick="loadSession(${s.id})" style="flex:1; cursor:pointer;">
+                <div class="session-preview">${escHtml(s.name || s.preview)}</div>
+                <div class="session-date">${s.created_at}</div>
+            </div>
+            <div style="display:flex; gap:4px; margin-top:6px;">
+                <button onclick="renameSession(${s.id})" style="background:transparent; border:1px solid var(--border); color:var(--muted); padding:3px 8px; border-radius:6px; cursor:pointer; font-size:11px;">✏️</button>
+                <button onclick="deleteSession(${s.id})" style="background:transparent; border:1px solid var(--border); color:var(--muted); padding:3px 8px; border-radius:6px; cursor:pointer; font-size:11px;">🗑</button>
+            </div>
+        </div>`).join('');
   }
   // Load most recent session on page load
   window.onload = async function() {

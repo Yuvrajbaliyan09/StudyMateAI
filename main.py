@@ -1,7 +1,7 @@
 from flask import Flask, request, render_template, jsonify, session, redirect, url_for
 from flask_dance.consumer import oauth_authorized
 from flask import flash
-from database import init_db, save_session, get_sessions, get_session_by_id, delete_session, save_quiz_result, get_quiz_stats, get_or_create_user, get_user_by_id, rename_session, delete_quiz_result, reset_quiz_stats
+from database import init_db, save_session, get_sessions, get_session_by_id, delete_session, save_quiz_result, get_quiz_stats, get_or_create_user, get_user_by_id, rename_session, delete_quiz_result, reset_quiz_stats , update_session
 from test_gemini import ai_service, generate_quiz, chat_with_notes
 import json
 import fitz
@@ -86,11 +86,16 @@ def box():
 def summarize():
     data = request.get_json()
     notes = data.get("notes", "")
+    existing_session_id = data.get("session_id")
     if not notes:
         return jsonify({"error": "No notes provided"}), 400
     result = ai_service(notes)
     user = get_current_user()
-    session_id = save_session(notes, result, user[0])
+    if existing_session_id:
+        update_session(existing_session_id, notes, result)
+        session_id = existing_session_id
+    else:
+        session_id = save_session(notes, result, user[0])
     return jsonify({"summary": result, "session_id": session_id})
 
 @app.route("/quiz", methods=["POST"])
@@ -98,12 +103,17 @@ def summarize():
 def quiz():
     data = request.get_json()
     notes = data.get("notes", "")
+    existing_session_id = data.get("session_id")
     if not notes:
         return jsonify({"error": "No notes provided"}), 400
     result = generate_quiz(notes)
     questions = json.loads(result)
     user = get_current_user()
-    session_id = save_session(notes, result, user[0])
+    if existing_session_id:
+        update_session(existing_session_id, notes, result)
+        session_id = existing_session_id
+    else:
+        session_id = save_session(notes, result, user[0])
     return jsonify({"questions": questions, "session_id": session_id})
 
 @app.route("/chat", methods=["POST"])
@@ -111,14 +121,17 @@ def quiz():
 def chat():
     data = request.get_json()
     notes = data.get("notes", "")
+    existing_session_id = data.get("session_id")
     if not notes:
         return jsonify({"error": "Please Provide Notes"}), 400
     question = data.get("message", "")
     result = chat_with_notes(notes, question)
     user = get_current_user()
-    session_id = save_session(notes, result, user[0])
+    if existing_session_id:
+        session_id = existing_session_id
+    else:
+        session_id = save_session(notes, result, user[0])
     return jsonify({"reply": result, "session_id": session_id})
-
 @app.route("/sessions")
 @login_required
 def sessions():
