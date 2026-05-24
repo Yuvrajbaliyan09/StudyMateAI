@@ -1,7 +1,7 @@
 from flask import Flask, request, render_template, jsonify, session, redirect, url_for
 from flask_dance.consumer import oauth_authorized
 from flask import flash
-from database import init_db, save_session, get_sessions, get_session_by_id, delete_session, save_quiz_result, get_quiz_stats, get_or_create_user, get_user_by_id, rename_session
+from database import init_db, save_session, get_sessions, get_session_by_id, delete_session, save_quiz_result, get_quiz_stats, get_or_create_user, get_user_by_id, rename_session, delete_quiz_result, reset_quiz_stats
 from test_gemini import ai_service, generate_quiz, chat_with_notes
 import json
 import fitz
@@ -219,12 +219,27 @@ def quiz_stats():
     result = []
     for row in rows:
         result.append({
-            "score": row[0],
-            "total": row[1],
-            "created_at": row[2],
-            "percentage": round((row[0] / row[1]) * 100)
+            "id": row[0],
+            "score": row[1],
+            "total": row[2],
+            "created_at": row[3],
+            "percentage": round((row[1] / row[2]) * 100)
         })
     return jsonify(result)
+
+@app.route("/quiz/stats/<int:result_id>/delete", methods=["POST"])
+@login_required
+def delete_quiz_result_route(result_id):
+    user_id = session.get("user_id")
+    delete_quiz_result(result_id, user_id)
+    return jsonify({"success": True})
+
+@app.route("/quiz/stats/reset", methods=["POST"])
+@login_required
+def reset_quiz_stats_route():
+    user_id = session.get("user_id")
+    reset_quiz_stats(user_id)
+    return jsonify({"success": True})
 
 print(__name__)
 if __name__ == "__main__":

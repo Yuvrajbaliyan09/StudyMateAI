@@ -531,73 +531,94 @@ async function saveQuizScore() {
     alert('✅ Text extracted! You can now Summarize, Quiz or Chat.');
   }
   async function loadStats() {
-    const res = await fetch('/quiz/stats');
-    const stats = await res.json();
-    
-    if (stats.length === 0) {
-        document.getElementById('statsEmpty').classList.remove('hidden');
-        document.getElementById('statsChart').classList.add('hidden');
-        return;
-    }
+      const res = await fetch('/quiz/stats');
+      const stats = await res.json();
+      
+      if (stats.length === 0) {
+          document.getElementById('statsEmpty').classList.remove('hidden');
+          document.getElementById('statsChart').classList.add('hidden');
+          return;
+      }
 
-    document.getElementById('statsEmpty').classList.add('hidden');
-    document.getElementById('statsChart').classList.remove('hidden');
+      document.getElementById('statsEmpty').classList.add('hidden');
+      document.getElementById('statsChart').classList.remove('hidden');
 
-    const labels = stats.map((s, i) => `Quiz ${i+1}`);
-    const scores = stats.map(s => s.percentage);
+      const labels = stats.map((s, i) => `Quiz ${i+1}`);
+      const scores = stats.map(s => s.percentage);
 
-    // Destroy old chart if exists
-    if (window.perfChart) window.perfChart.destroy();
+      if (window.perfChart) window.perfChart.destroy();
 
-    const ctx = document.getElementById('performanceChart').getContext('2d');
-    window.perfChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels,
-            datasets: [{
-                label: 'Score %',
-                data: scores,
-                borderColor: '#6c63ff',
-                backgroundColor: '#6c63ff22',
-                borderWidth: 2,
-                pointBackgroundColor: '#6c63ff',
-                pointRadius: 5,
-                fill: true,
-                tension: 0.4
-            }]
-        },
-        options: {
-            responsive: true,
-            scales: {
-                y: {
-                    min: 0, max: 100,
-                    ticks: { color: '#7a7d8f', callback: v => v+'%' },
-                    grid: { color: '#2a2c38' }
-                },
-                x: { ticks: { color: '#7a7d8f' }, grid: { color: '#2a2c38' } }
-            },
-            plugins: {
-                legend: { labels: { color: '#e8e9f0' } }
-            }
-        }
-    });
+      const ctx = document.getElementById('performanceChart').getContext('2d');
+      window.perfChart = new Chart(ctx, {
+          type: 'line',
+          data: {
+              labels,
+              datasets: [{
+                  label: 'Score %',
+                  data: scores,
+                  borderColor: '#6c63ff',
+                  backgroundColor: '#6c63ff22',
+                  borderWidth: 2,
+                  pointBackgroundColor: '#6c63ff',
+                  pointRadius: 5,
+                  fill: true,
+                  tension: 0.4
+              }]
+          },
+          options: {
+              responsive: true,
+              scales: {
+                  y: {
+                      min: 0, max: 100,
+                      ticks: { color: '#7a7d8f', callback: v => v+'%' },
+                      grid: { color: '#2a2c38' }
+                  },
+                  x: { ticks: { color: '#7a7d8f' }, grid: { color: '#2a2c38' } }
+              },
+              plugins: { legend: { labels: { color: '#e8e9f0' } } }
+          }
+      });
 
-    // Summary stats
-    const avg = Math.round(scores.reduce((a,b) => a+b, 0) / scores.length);
-    const best = Math.max(...scores);
-    document.getElementById('statsInfo').innerHTML = `
-        <div style="background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:12px 20px; text-align:center;">
-            <div style="font-size:22px; font-weight:700; color:var(--accent)">${avg}%</div>
-            <div style="font-size:11px; color:var(--muted)">Average Score</div>
-        </div>
-        <div style="background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:12px 20px; text-align:center;">
-            <div style="font-size:22px; font-weight:700; color:var(--accent2)">${best}%</div>
-            <div style="font-size:11px; color:var(--muted)">Best Score</div>
-        </div>
-        <div style="background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:12px 20px; text-align:center;">
-            <div style="font-size:22px; font-weight:700; color:var(--text)">${stats.length}</div>
-            <div style="font-size:11px; color:var(--muted)">Total Attempts</div>
-        </div>`;
+      const avg = Math.round(scores.reduce((a,b) => a+b, 0) / scores.length);
+      const best = Math.max(...scores);
+
+      document.getElementById('statsInfo').innerHTML = `
+          <div style="background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:12px 20px; text-align:center;">
+              <div style="font-size:22px; font-weight:700; color:var(--accent)">${avg}%</div>
+              <div style="font-size:11px; color:var(--muted)">Average Score</div>
+          </div>
+          <div style="background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:12px 20px; text-align:center;">
+              <div style="font-size:22px; font-weight:700; color:var(--accent2)">${best}%</div>
+              <div style="font-size:11px; color:var(--muted)">Best Score</div>
+          </div>
+          <div style="background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:12px 20px; text-align:center;">
+              <div style="font-size:22px; font-weight:700; color:var(--text)">${stats.length}</div>
+              <div style="font-size:11px; color:var(--muted)">Total Attempts</div>
+          </div>
+          <div style="width:100%; margin-top:8px;">
+              <button onclick="resetAllStats()" style="background:#ff6b6b22; border:1px solid #ff6b6b; color:#ff6b6b; padding:8px 16px; border-radius:8px; cursor:pointer; font-size:13px;">🗑 Reset All Stats</button>
+          </div>
+          <div style="width:100%; margin-top:12px;">
+              <div style="font-size:12px; color:var(--muted); margin-bottom:8px;">Individual Attempts</div>
+              ${stats.map((s, i) => `
+                  <div style="display:flex; justify-content:space-between; align-items:center; background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:10px 14px; margin-bottom:6px;">
+                      <span style="font-size:13px; color:var(--text)">Quiz ${i+1} — ${s.score}/${s.total} (${s.percentage}%)</span>
+                      <button onclick="deleteOneStat(${s.id})" style="background:transparent; border:1px solid #ff6b6b; color:#ff6b6b; padding:4px 10px; border-radius:6px; cursor:pointer; font-size:12px;">Delete</button>
+                  </div>
+              `).join('')}
+          </div>`;
+  }
+
+  async function deleteOneStat(id) {
+      if (!confirm('Delete this attempt?')) return;
+      await fetch(`/quiz/stats/${id}/delete`, { method: 'POST' });
+      loadStats();
+  }
+
+  async function resetAllStats() {
+      if (!confirm('Reset all quiz stats? This cannot be undone.')) return;
+      await fetch('/quiz/stats/reset', { method: 'POST' });
+      loadStats();
   }
 </script>
 </body>

@@ -101,7 +101,7 @@ def get_quiz_stats(user_id):
     conn = sqlite3.connect("studymate.db")
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT qr.score, qr.total, qr.created_at 
+        SELECT qr.id, qr.score, qr.total, qr.created_at 
         FROM quiz_results qr
         JOIN sessions s ON qr.session_id = s.id
         WHERE s.user_id = ?
@@ -110,6 +110,30 @@ def get_quiz_stats(user_id):
     rows = cursor.fetchall()
     conn.close()
     return rows
+
+def delete_quiz_result(result_id, user_id):
+    conn = sqlite3.connect("studymate.db")
+    cursor = conn.cursor()
+    cursor.execute("""
+        DELETE FROM quiz_results 
+        WHERE id = ? AND session_id IN (
+            SELECT id FROM sessions WHERE user_id = ?
+        )
+    """, (result_id, user_id))
+    conn.commit()
+    conn.close()
+
+def reset_quiz_stats(user_id):
+    conn = sqlite3.connect("studymate.db")
+    cursor = conn.cursor()
+    cursor.execute("""
+        DELETE FROM quiz_results 
+        WHERE session_id IN (
+            SELECT id FROM sessions WHERE user_id = ?
+        )
+    """, (user_id,))
+    conn.commit()
+    conn.close()
 
 def get_or_create_user(google_id, name, email):
     conn = sqlite3.connect("studymate.db")
