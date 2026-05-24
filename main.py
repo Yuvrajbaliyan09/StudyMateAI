@@ -2,7 +2,7 @@ from flask import Flask, request, render_template, jsonify, session, redirect, u
 from flask_dance.consumer import oauth_authorized
 from flask import flash
 from database import init_db, save_session, get_sessions, get_session_by_id, delete_session, save_quiz_result, get_quiz_stats, get_or_create_user, get_user_by_id, rename_session, delete_quiz_result, reset_quiz_stats , update_session
-from test_gemini import ai_service, generate_quiz, chat_with_notes
+from test_gemini import ai_service, generate_quiz, chat_with_notes , generate_schedule
 import json
 import fitz
 from PIL import Image
@@ -104,9 +104,11 @@ def quiz():
     data = request.get_json()
     notes = data.get("notes", "")
     existing_session_id = data.get("session_id")
+    count = int(data.get("count", 5))
+    count = max(1, min(count, 20))  # clamp between 1 and 20
     if not notes:
         return jsonify({"error": "No notes provided"}), 400
-    result = generate_quiz(notes)
+    result = generate_quiz(notes, count)
     questions = json.loads(result)
     user = get_current_user()
     if existing_session_id:
@@ -132,6 +134,21 @@ def chat():
     else:
         session_id = save_session(notes, result, user[0])
     return jsonify({"reply": result, "session_id": session_id})
+
+@app.route("/schedule", methods=["POST"])
+@login_required
+def schedule():
+    data = request.get_json()
+    syllabus = data.get("syllabus", "")
+    if not syllabus:
+        return jsonify({"error": "No syllabus provided"}), 400
+    result = generate_schedule(syllabus)
+    try:
+        schedule_data = json.loads(result)
+    except:
+        return jsonify({"error": "Failed to generate schedule"}), 500
+    return jsonify(schedule_data)
+
 @app.route("/sessions")
 @login_required
 def sessions():

@@ -163,6 +163,7 @@
         <button class="tab active" onclick="switchTab('summary')">Summary</button>
         <button class="tab" onclick="switchTab('quiz')">Quiz</button>
         <button class="tab" onclick="switchTab('chat')">Chat</button>
+        <button class="tab" onclick="switchTab('schedule')">📅 Planner</button>
       </div>
     </div>
 
@@ -184,9 +185,15 @@
           <button class="btn btn-primary" id="summarizeBtn" onclick="doSummarize()">
             <span>✦ Summarize</span>
           </button>
-          <button class="btn btn-secondary" id="quizBtn" onclick="doQuiz()">
-            <span>Generate Quiz</span>
-          </button>
+          <div style="display:flex; gap:8px; align-items:center;">
+            <input type="number" id="quizCount" value="5" min="1" max="20" 
+                style="width:60px; padding:8px; background:var(--surface2); border:1px solid var(--border); 
+                border-radius:8px; color:var(--text); font-size:13px; text-align:center;">
+            <label style="font-size:12px; color:var(--muted);">questions</label>
+            <button class="btn btn-secondary" id="quizBtn" onclick="doQuiz()">
+                <span>Generate Quiz</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -226,6 +233,20 @@
   </div>
 
       <!-- Chat tab -->
+
+
+      <div id="tab-schedule" class="hidden">
+        <div style="padding: 16px 0;">
+          <textarea id="syllabusInput" placeholder="Paste your syllabus here..." 
+            style="width:100%; height:150px; background:var(--surface2); border:1px solid var(--border); 
+            border-radius:10px; padding:12px; color:var(--text); font-size:13px; resize:vertical; font-family:'DM Sans',sans-serif;"></textarea>
+          <button id="scheduleBtn" onclick="doSchedule()" class="btn btn-primary" style="margin-top:10px;">
+            <span>📅 Generate Study Plan</span>
+          </button>
+          <div id="scheduleOut" class="hidden" style="margin-top:16px;"></div>
+        </div>
+      </div>
+
       <div id="tab-chat" class="hidden">
         <div class="output-card purple">
           <div class="output-title"><span class="dot dot-purple"></span> Chat with your Notes</div>
@@ -253,7 +274,7 @@
     currentTab = tab;
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
     event.target.classList.add('active');
-    ['summary','quiz','chat','stats'].forEach(t => {
+    ['summary','quiz','chat','stats','schedule'].forEach(t => {
       document.getElementById('tab-'+t).classList.toggle('hidden', t !== tab);
     });
     if (tab === 'stats') loadStats();
@@ -276,7 +297,7 @@
   function switchTabByName(tab) {
     currentTab = tab;
     document.querySelectorAll('.tab').forEach((t,i) => {
-        const tabs = ['summary','quiz','chat','stats'];
+        const tabs = ['summary','quiz','chat','stats','schedule'];
         t.classList.toggle('active', tabs[i] === tab);
     });
     ['summary','quiz','chat','stats'].forEach(t => {
@@ -324,7 +345,7 @@
     const res = await fetch('/quiz', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({notes, session_id: currentSessionId})
+      body: JSON.stringify({notes, session_id: currentSessionId, count: parseInt(document.getElementById('quizCount').value) || 5})
     });
     const data = await res.json();
     btn.innerHTML = '<span>Generate Quiz</span>';
@@ -638,6 +659,51 @@ async function saveQuizScore() {
       if (!confirm('Reset all quiz stats? This cannot be undone.')) return;
       await fetch('/quiz/stats/reset', { method: 'POST' });
       loadStats();
+  }
+
+
+  async function doSchedule() {
+    const syllabus = document.getElementById('syllabusInput').value.trim();
+    if (!syllabus) { alert('Please paste your syllabus first!'); return; }
+    const btn = document.getElementById('scheduleBtn');
+    btn.innerHTML = '<span class="spinner"></span> Generating...';
+    btn.disabled = true;
+
+    const res = await fetch('/schedule', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ syllabus })
+    });
+    const data = await res.json();
+    btn.innerHTML = '<span>📅 Generate Study Plan</span>';
+    btn.disabled = false;
+
+    if (data.error) { alert(data.error); return; }
+
+    const priorityColor = { high: '#ff6b6b', medium: '#f7c948', low: '#00d4aa' };
+    
+    let html = `
+        <div style="background:var(--surface2); border:1px solid var(--border); border-radius:12px; padding:16px; margin-bottom:16px;">
+            <div style="font-size:16px; font-weight:700; color:var(--text); margin-bottom:4px;">📅 ${escHtml(data.title)}</div>
+            <div style="font-size:12px; color:var(--muted);">${data.total_days} days · ${data.daily_hours} hrs/day</div>
+        </div>`;
+
+    data.days.forEach(d => {
+        const color = priorityColor[d.priority] || '#6c63ff';
+        html += `
+        <div style="background:var(--surface2); border:1px solid var(--border); border-left:3px solid ${color}; border-radius:10px; padding:14px; margin-bottom:10px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                <span style="font-weight:600; color:var(--text);">Day ${d.day}</span>
+                <span style="font-size:11px; color:${color}; background:${color}22; padding:3px 8px; border-radius:20px;">${d.priority} priority · ${escHtml(d.duration)}</span>
+            </div>
+            <ul style="margin:0; padding-left:16px;">
+                ${d.topics.map(t => `<li style="font-size:13px; color:var(--muted); margin-bottom:4px;">${escHtml(t)}</li>`).join('')}
+            </ul>
+        </div>`;
+    });
+
+    document.getElementById('scheduleOut').innerHTML = html;
+    document.getElementById('scheduleOut').classList.remove('hidden');
   }
 </script>
 </body>
