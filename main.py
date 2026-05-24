@@ -141,7 +141,7 @@ def view_session(session_id):
     session_data = get_session_by_id(session_id)
     if not session_data:
         return jsonify({"error": "Not found"}), 404
-    if session_data[4] != user_id:
+    if session_data[5] != user_id:
         return jsonify({"error": "Unauthorized"}), 403
     return jsonify({
         "id": session_data[0],
@@ -157,7 +157,7 @@ def delete_session_route(session_id):
     session_data = get_session_by_id(session_id)
     if not session_data:
         return jsonify({"error": "Not found"}), 404
-    if session_data[4] != user_id:
+    if session_data[5] != user_id:
         return jsonify({"error": "Unauthorized"}), 403
     delete_session(session_id)
     return jsonify({"success": True})
@@ -169,7 +169,7 @@ def rename_session_route(session_id):
     session_data = get_session_by_id(session_id)
     if not session_data:
         return jsonify({"error": "Not found"}), 404
-    if session_data[4] != user_id:
+    if session_data[5] != user_id:
         return jsonify({"error": "Unauthorized"}), 403
     data = request.get_json()
     new_name = data.get("name", "").strip()
