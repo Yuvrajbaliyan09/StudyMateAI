@@ -1,9 +1,5 @@
 import os
 import psycopg2
-from dotenv import load_dotenv
-
-load_dotenv()
-
 DATABASE_URL = os.getenv("postgresql://postgres.nvxloynejlgsosejgfwk:YuvrajBaliyan@123@aws-1-ap-southeast-1.pooler.supabase.com:5432/postgres")
 
 def get_conn():
