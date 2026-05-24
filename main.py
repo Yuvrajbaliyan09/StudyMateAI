@@ -15,7 +15,7 @@ from flask_dance.contrib.google import make_google_blueprint, google
 load_dotenv()
 
 app = Flask(__name__)
-app.secret_key = os.urandom(24)
+app.secret_key = os.getenv("SECRET_KEY")
 os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'  # for localhost
 
 google_bp = make_google_blueprint(

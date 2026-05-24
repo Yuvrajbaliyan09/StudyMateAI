@@ -1,0 +1,9 @@
+flask
+flask-dance
+groq
+python-dotenv
+pymupdf
+Pillow
+pytesseract
+requests
+gunicorn
