@@ -214,7 +214,8 @@ def save_score():
 @app.route("/quiz/stats")
 @login_required
 def quiz_stats():
-    rows = get_quiz_stats()
+    user_id = session.get("user_id")
+    rows = get_quiz_stats(user_id)
     result = []
     for row in rows:
         result.append({

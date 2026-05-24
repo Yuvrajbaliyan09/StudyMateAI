@@ -97,14 +97,16 @@ def save_quiz_result(session_id, score, total):
     conn.commit()
     conn.close()
 
-def get_quiz_stats():
+def get_quiz_stats(user_id):
     conn = sqlite3.connect("studymate.db")
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT score, total, created_at 
-        FROM quiz_results 
-        ORDER BY created_at ASC
-    """)
+        SELECT qr.score, qr.total, qr.created_at 
+        FROM quiz_results qr
+        JOIN sessions s ON qr.session_id = s.id
+        WHERE s.user_id = ?
+        ORDER BY qr.created_at ASC
+    """, (user_id,))
     rows = cursor.fetchall()
     conn.close()
     return rows
