@@ -137,9 +137,12 @@ def sessions():
 @app.route("/session/<int:session_id>")
 @login_required
 def view_session(session_id):
+    user_id = session.get("user_id")
     session_data = get_session_by_id(session_id)
     if not session_data:
         return jsonify({"error": "Not found"}), 404
+    if session_data[4] != user_id:
+        return jsonify({"error": "Unauthorized"}), 403
     return jsonify({
         "id": session_data[0],
         "notes": session_data[1],
@@ -150,12 +153,24 @@ def view_session(session_id):
 @app.route("/session/<int:session_id>/delete", methods=["POST"])
 @login_required
 def delete_session_route(session_id):
+    user_id = session.get("user_id")
+    session_data = get_session_by_id(session_id)
+    if not session_data:
+        return jsonify({"error": "Not found"}), 404
+    if session_data[4] != user_id:
+        return jsonify({"error": "Unauthorized"}), 403
     delete_session(session_id)
     return jsonify({"success": True})
 
 @app.route("/session/<int:session_id>/rename", methods=["POST"])
 @login_required
 def rename_session_route(session_id):
+    user_id = session.get("user_id")
+    session_data = get_session_by_id(session_id)
+    if not session_data:
+        return jsonify({"error": "Not found"}), 404
+    if session_data[4] != user_id:
+        return jsonify({"error": "Unauthorized"}), 403
     data = request.get_json()
     new_name = data.get("name", "").strip()
     if not new_name:
