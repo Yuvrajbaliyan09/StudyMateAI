@@ -6,6 +6,9 @@ load_dotenv()
 api_key = os.getenv("API_KEY")
 client = Groq(api_key=api_key)
 
+MODEL_MAIN = os.getenv("GROQ_MODEL_MAIN", "openai/gpt-oss-120b")  # summary, schedule
+MODEL_FAST = os.getenv("GROQ_MODEL_FAST", "openai/gpt-oss-20b")   # quiz, chat
+
 def clean_notes(notes, limit=4000):
     """Cut at sentence boundary instead of mid-word"""
     notes = notes[:limit]
@@ -17,7 +20,7 @@ def clean_notes(notes, limit=4000):
 def ai_service(notes):
     notes = clean_notes(notes)
     response = client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
+        model= MODEL_MAIN,
         messages=[
             {
                 "role": "system",
@@ -41,7 +44,7 @@ def ai_service(notes):
 def generate_quiz(notes, count=5):
     notes = clean_notes(notes)
     response = client.chat.completions.create(
-        model="llama-3.1-8b-instant",
+        model= MODEL_FAST,
         messages=[
             {
                 "role": "system",
@@ -74,7 +77,7 @@ Notes: {notes}"""
 def chat_with_notes(notes, question):
     notes = clean_notes(notes)
     response = client.chat.completions.create(
-        model="llama-3.1-8b-instant",
+        model= MODEL_FAST,
         messages=[
             {
                 "role": "system",
@@ -101,7 +104,7 @@ Notes:
 def generate_schedule(syllabus):
     syllabus = clean_notes(syllabus, limit=3000)
     response = client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
+        model= MODEL_MAIN ,
         messages=[
             {
                 "role": "system",
