@@ -71,7 +71,7 @@ Notes: {notes}"""
             }
         ],
         temperature=0.5,
-        max_tokens=2500
+        max_tokens=5000
     )
     return response.choices[0].message.content
 def chat_with_notes(notes, question):
